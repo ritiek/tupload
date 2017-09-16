@@ -2,15 +2,8 @@
 
 import telepot
 import time
-import requests
 import os
 import os.path
-import pyping
-import random
-from wakeonlan import wol
-from shutil import copyfileobj
-import socket
-from sys import path
 import argparse
 
 directory = '/home/pi/'
@@ -36,16 +29,14 @@ def handle(msg, directory):
         bot.sendChatAction(chat_id, 'typing')
         file_name = msg['document']['file_name']
         file_id = msg['document']['file_id']
-        file_path = bot.getFile(file_id=file_id)['file_path']
 
-        link = 'https://api.telegram.org/file/bot' + token + file_path
+
         bot.sendMessage(chat_id, 'Downloading ' + file_name)
 
         received_file = requests.get(link, stream=True).raw
         local_path = os.path.join(local_directory, file_name)
 
-        with open(local_path, 'wb') as out_file:
-            copyfileobj(received_file, out_file)
+        bot.download_file(file_id, local_path)
 
     else:
         bot.sendChatAction(chat_id, 'typing')
@@ -73,6 +64,7 @@ if __name__ == '__main__':
 
         while True:
             time.sleep(10)
+
     else:
         print(args.print_help())
         print('The expected directory path does not exist')

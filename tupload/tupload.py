@@ -39,10 +39,10 @@ def handle(msg):
     print(time.strftime('[%d %b, %y %r] ' + str(chat_id)) + ' : ' + str(file_name))
 
 
-if __name__ == '__main__':
-
+def command_line():
     args = get_arguments()
     parsed_args = args.parse_args()
+    global local_directory
     local_directory = parsed_args.directory
 
     if os.path.exists(local_directory):
@@ -51,6 +51,7 @@ if __name__ == '__main__':
         if environ_token is not None:
             token = environ_token
 
+        global bot
         bot = telepot.Bot(token)
         bot.message_loop(handle)
         print('Bot is ready to receive files...')
@@ -61,3 +62,8 @@ if __name__ == '__main__':
     else:
         print(args.print_help())
         print('The expected directory path does not exist')
+
+
+if __name__ == '__main__':
+
+    command_line()

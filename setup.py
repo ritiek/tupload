@@ -8,7 +8,7 @@ with open("README.rst", "r") as f:
 
 setup(name='tupload',
       version=tupload.__version__,
-      description='Telegram bot to fetch files from the server to the client',
+      description='Telegram bot to fetch files from the client',
       long_description=long_description,
       author='Ritiek Malhotra',
       author_email='ritiekmalhotra123@gmail.com',

@@ -3,15 +3,12 @@
 import telepot
 import time
 import os
-import os.path
 import argparse
-
-directory = '/home/pi/'
 
 
 def get_arguments():
     parser = argparse.ArgumentParser(
-        description='Telegram bot to fetch files from the server to the client')
+        description='Telegram bot to fetch files from the client')
 
     parser.add_argument(
         '-d',
@@ -22,7 +19,7 @@ def get_arguments():
     return parser
 
 
-def handle(msg, directory):
+def handle(msg):
     chat_id = msg['chat']['id']
 
     if 'document' in msg:
@@ -30,12 +27,8 @@ def handle(msg, directory):
         file_name = msg['document']['file_name']
         file_id = msg['document']['file_id']
 
-
         bot.sendMessage(chat_id, 'Downloading ' + file_name)
-
-        received_file = requests.get(link, stream=True).raw
         local_path = os.path.join(local_directory, file_name)
-
         bot.download_file(file_id, local_path)
 
     else:

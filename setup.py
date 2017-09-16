@@ -24,7 +24,6 @@ setup(name='tupload',
       download_url='https://github.com/ritiek/tupload/archive/v' + tupload.__version__ + '.tar.gz',
       classifiers=[],
       install_requires=[
-            'requests',
             'telepot',
       ]
      )

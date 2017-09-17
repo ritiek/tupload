@@ -24,7 +24,7 @@ def handle(msg):
     chat_id = msg['chat']['id']
     bot.sendChatAction(chat_id, 'typing')
 
-    downloadable = ['document, photo, video, audio, voice']
+    downloadable = ['document', 'photo', 'video', 'audio', 'voice']
     ignore = ['chat', 'date', 'from', 'message_id']
 
     for item in list(msg):
@@ -84,9 +84,11 @@ def handle(msg):
 
 
 def command_line():
+    global local_directory
+    global bot
+
     args = get_arguments()
     parsed_args = args.parse_args()
-    global local_directory
     local_directory = parsed_args.directory
 
     if os.path.exists(local_directory):
@@ -95,7 +97,6 @@ def command_line():
         if environ_token is not None:
             token = environ_token
 
-        global bot
         bot = telepot.Bot(token)
         bot.message_loop(handle)
         print('Bot is online')

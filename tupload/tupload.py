@@ -6,7 +6,6 @@ import os
 import sys
 import argparse
 
-
 try:
     import configparser
 except:
@@ -26,7 +25,7 @@ def get_arguments():
     return parser
 
 
-def tokenize():
+def get_config():
     conf = configparser.SafeConfigParser()
 
     home = os.path.expanduser('~')
@@ -66,6 +65,7 @@ def tokenize():
 
 def handle(msg):
     chat_id = msg['chat']['id']
+    id_known = allowed == [''] or str(chat_id) in allowed
 
     downloadable = ['document', 'photo', 'video', 'audio', 'voice']
     ignore = ['chat', 'date', 'from', 'message_id']
@@ -75,61 +75,61 @@ def handle(msg):
             msg_type = item
             break
 
-    if allowed == [''] or str(chat_id) in allowed:
-        bot.sendChatAction(chat_id, 'typing')
-
-        if msg_type == 'text':
-            result = msg['text']
+    if msg_type == 'text':
+        result = msg['text']
+        if id_known:
+            bot.sendChatAction(chat_id, 'typing')
             if result == '/start':
                 bot.sendMessage(chat_id, 'tupload is online')
             else:
                 bot.sendMessage(chat_id, 'Talk is cheap. Send me the files.')
 
-        elif msg_type == 'document':
-            result = msg[msg_type]['file_name']
-            file_id = msg[msg_type]['file_id']
+    elif msg_type == 'document':
+        result = msg[msg_type]['file_name']
+        file_id = msg[msg_type]['file_id']
 
-        elif msg_type == 'photo':
-            result = str(msg['date']) + '.jpg'
-            file_id = msg[msg_type][0]['file_id']
+    elif msg_type == 'photo':
+        result = str(msg['date']) + '.jpg'
+        file_id = msg[msg_type][0]['file_id']
 
-        elif msg_type == 'video':
-            file_type = msg[msg_type]['mime_type'].split('/')[-1]
-            result = str(msg['date']) + '.' + file_type
-            file_id = msg[msg_type]['file_id']
+    elif msg_type == 'video':
+        file_type = msg[msg_type]['mime_type'].split('/')[-1]
+        result = str(msg['date']) + '.' + file_type
+        file_id = msg[msg_type]['file_id']
 
-        elif msg_type == 'audio':
-            file_type = msg[msg_type]['mime_type'].split('/')[-1]
-            result = msg['audio']['title'] + '.' + file_type
-            file_id = msg[msg_type]['file_id']
+    elif msg_type == 'audio':
+        file_type = msg[msg_type]['mime_type'].split('/')[-1]
+        result = msg['audio']['title'] + '.' + file_type
+        file_id = msg[msg_type]['file_id']
 
-        elif msg_type == 'voice':
-            file_type = msg[msg_type]['mime_type'].split('/')[-1]
-            result = str(msg['date']) + '.' + file_type
-            file_id = msg[msg_type]['file_id']
+    elif msg_type == 'voice':
+        file_type = msg[msg_type]['mime_type'].split('/')[-1]
+        result = str(msg['date']) + '.' + file_type
+        file_id = msg[msg_type]['file_id']
 
-        elif msg_type == 'contact':
-            name = msg['contact']['first_name']
-            number = msg['contact']['phone_number']
-            result = name + ' (' + number + ')'
+    elif msg_type == 'contact':
+        name = msg['contact']['first_name']
+        number = msg['contact']['phone_number']
+        result = name + ' (' + number + ')'
 
-        elif msg_type == 'location':
-            result = '{0}, {1}'
-            result = result.format(msg['location']['latitude'], msg['location']['longitude'])
+    elif msg_type == 'location':
+        result = '{0}, {1}'
+        result = result.format(msg['location']['latitude'], msg['location']['longitude'])
 
-        else:
-            result = 'This media type is not currently supported'
+    else:
+        result = 'This media type is not currently supported'
 
-        if msg_type in downloadable:
-            bot.sendMessage(chat_id, 'Downloading ' + result)
-            local_path = os.path.join(local_directory, result)
-            bot.download_file(file_id, local_path)
+    if id_known and msg_type in downloadable:
+        bot.sendChatAction(chat_id, 'typing')
+        bot.sendMessage(chat_id, 'Downloading ' + result)
+        local_path = os.path.join(local_directory, result)
+        bot.download_file(file_id, local_path)
 
     current_time = time.strftime('[%d %b, %y %r]')
     string = '\n' + current_time + ': '
-    string += str(chat_id) + ' [' + msg['from']['username'] + ']'
+    string += str(chat_id) + ' [@' + msg['from']['username'] + ']'
 
-    if not (allowed == [''] or str(chat_id) in allowed):
+    if not id_known:
         string += ' (unrecognized id)'
 
     string += ':\n' + msg_type + ': ' + result
@@ -146,7 +146,7 @@ def command_line():
     local_directory = parsed_args.directory
 
     if os.path.exists(local_directory):
-        token, allowed = tokenize()
+        token, allowed = get_config()
 
         bot = telepot.Bot(token)
         bot.message_loop(handle)

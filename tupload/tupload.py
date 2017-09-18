@@ -45,24 +45,27 @@ def tokenize():
         print('writing raw config file to ' + user_path)
         conf.add_section('tupload')
         conf.set('tupload', 'token', '')
+        conf.set('tupload', 'allowed_ids', '')
 
         with open(file_path, 'w') as configfile:
             conf.write(configfile)
 
     conf.read(file_path)
     token = conf.get('tupload', 'token')
+    allowed = conf.get('tupload', 'allowed_ids')
 
     if token == '':
         print('edit ' + user_path + ' to include your telegram token')
         sys.exit(1)
 
-    return token
+    allowed = allowed.replace(' ', '')
+    allowed = allowed.split(',')
+
+    return token, allowed
 
 
 def handle(msg):
-    #print(msg)
     chat_id = msg['chat']['id']
-    bot.sendChatAction(chat_id, 'typing')
 
     downloadable = ['document', 'photo', 'video', 'audio', 'voice']
     ignore = ['chat', 'date', 'from', 'message_id']
@@ -72,70 +75,78 @@ def handle(msg):
             msg_type = item
             break
 
-    if msg_type == 'text':
-        result = msg['text']
-        if result == '/start':
-            bot.sendMessage(chat_id, 'tupload is online')
+    if allowed == [''] or str(chat_id) in allowed:
+        bot.sendChatAction(chat_id, 'typing')
+
+        if msg_type == 'text':
+            result = msg['text']
+            if result == '/start':
+                bot.sendMessage(chat_id, 'tupload is online')
+            else:
+                bot.sendMessage(chat_id, 'Talk is cheap. Send me the files.')
+
+        elif msg_type == 'document':
+            result = msg[msg_type]['file_name']
+            file_id = msg[msg_type]['file_id']
+
+        elif msg_type == 'photo':
+            result = str(msg['date']) + '.jpg'
+            file_id = msg[msg_type][0]['file_id']
+
+        elif msg_type == 'video':
+            file_type = msg[msg_type]['mime_type'].split('/')[-1]
+            result = str(msg['date']) + '.' + file_type
+            file_id = msg[msg_type]['file_id']
+
+        elif msg_type == 'audio':
+            file_type = msg[msg_type]['mime_type'].split('/')[-1]
+            result = msg['audio']['title'] + '.' + file_type
+            file_id = msg[msg_type]['file_id']
+
+        elif msg_type == 'voice':
+            file_type = msg[msg_type]['mime_type'].split('/')[-1]
+            result = str(msg['date']) + '.' + file_type
+            file_id = msg[msg_type]['file_id']
+
+        elif msg_type == 'contact':
+            name = msg['contact']['first_name']
+            number = msg['contact']['phone_number']
+            result = name + ' (' + number + ')'
+
+        elif msg_type == 'location':
+            result = '{0}, {1}'
+            result = result.format(msg['location']['latitude'], msg['location']['longitude'])
+
         else:
-            bot.sendMessage(chat_id, 'Talk is cheap. Send me the files.')
+            result = 'This media type is not currently supported'
 
-    elif msg_type == 'document':
-        result = msg[msg_type]['file_name']
-        file_id = msg[msg_type]['file_id']
-
-    elif msg_type == 'photo':
-        result = str(msg['date']) + '.jpg'
-        file_id = msg[msg_type][0]['file_id']
-
-    elif msg_type == 'video':
-        file_type = msg[msg_type]['mime_type'].split('/')[-1]
-        result = str(msg['date']) + '.' + file_type
-        file_id = msg[msg_type]['file_id']
-
-    elif msg_type == 'audio':
-        file_type = msg[msg_type]['mime_type'].split('/')[-1]
-        result = msg['audio']['title'] + '.' + file_type
-        file_id = msg[msg_type]['file_id']
-
-    elif msg_type == 'voice':
-        file_type = msg[msg_type]['mime_type'].split('/')[-1]
-        result = str(msg['date']) + '.' + file_type
-        file_id = msg[msg_type]['file_id']
-
-    elif msg_type == 'contact':
-        name = msg['contact']['first_name']
-        number = msg['contact']['phone_number']
-        result = name + ' (' + number + ')'
-
-    elif msg_type == 'location':
-        result = '{0}, {1}'
-        result = result.format(msg['location']['latitude'], msg['location']['longitude'])
-
-    else:
-        result = 'This media type is not currently supported'
-
-    if msg_type in downloadable:
-        bot.sendMessage(chat_id, 'Downloading ' + result)
-        local_path = os.path.join(local_directory, result)
-        bot.download_file(file_id, local_path)
+        if msg_type in downloadable:
+            bot.sendMessage(chat_id, 'Downloading ' + result)
+            local_path = os.path.join(local_directory, result)
+            bot.download_file(file_id, local_path)
 
     current_time = time.strftime('[%d %b, %y %r]')
     string = '\n' + current_time + ': '
-    string += str(chat_id) + ' (' + msg['from']['username'] + '):'
-    string += '\n' + msg_type + ': ' + result
+    string += str(chat_id) + ' [' + msg['from']['username'] + ']'
+
+    if not (allowed == [''] or str(chat_id) in allowed):
+        string += ' (unrecognized id)'
+
+    string += ':\n' + msg_type + ': ' + result
     print(string)
 
 
 def command_line():
     global local_directory
     global bot
+    global allowed
 
     args = get_arguments()
     parsed_args = args.parse_args()
     local_directory = parsed_args.directory
 
     if os.path.exists(local_directory):
-        token = tokenize()
+        token, allowed = tokenize()
 
         bot = telepot.Bot(token)
         bot.message_loop(handle)
@@ -150,5 +161,5 @@ def command_line():
 
 
 if __name__ == '__main__':
-    tokenize()
+
     command_line()

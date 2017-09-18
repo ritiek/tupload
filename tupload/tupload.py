@@ -3,7 +3,14 @@
 import telepot
 import time
 import os
+import sys
 import argparse
+
+
+try:
+    import configparser
+except:
+    from six.moves import configparser
 
 
 def get_arguments():
@@ -17,6 +24,39 @@ def get_arguments():
         default='.')
 
     return parser
+
+
+def tokenize():
+    conf = configparser.SafeConfigParser()
+
+    home = os.path.expanduser('~')
+    folder_name = '.tupload'
+    folder_path = os.path.join(home, folder_name)
+
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    file_name = 'tupload.ini'
+    half_path = os.path.join(folder_name, file_name)
+    file_path = os.path.join(home, half_path)
+    user_path = os.path.join('~', half_path)
+
+    if not os.path.isfile(file_path):
+        print('writing raw config file to ' + user_path)
+        conf.add_section('tupload')
+        conf.set('tupload', 'token', '')
+
+        with open(file_path, 'w') as configfile:
+            conf.write(configfile)
+
+    conf.read(file_path)
+    token = conf.get('tupload', 'token')
+
+    if token == '':
+        print('edit ' + user_path + ' to include your telegram token')
+        sys.exit(1)
+
+    return token
 
 
 def handle(msg):
@@ -34,7 +74,10 @@ def handle(msg):
 
     if msg_type == 'text':
         result = msg['text']
-        bot.sendMessage(chat_id, "Talk is cheap. Send me the files.")
+        if result == '/start':
+            bot.sendMessage(chat_id, 'tupload is online')
+        else:
+            bot.sendMessage(chat_id, 'Talk is cheap. Send me the files.')
 
     elif msg_type == 'document':
         result = msg[msg_type]['file_name']
@@ -92,10 +135,7 @@ def command_line():
     local_directory = parsed_args.directory
 
     if os.path.exists(local_directory):
-        environ_token = os.environ.get('TELEGRAM_TOKEN')
-
-        if environ_token is not None:
-            token = environ_token
+        token = tokenize()
 
         bot = telepot.Bot(token)
         bot.message_loop(handle)
@@ -110,5 +150,5 @@ def command_line():
 
 
 if __name__ == '__main__':
-
+    tokenize()
     command_line()

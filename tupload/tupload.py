@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import telepot
+import pyperclip
 import time
 import os
 import sys
@@ -82,7 +83,8 @@ def handle(msg):
             if result == '/start':
                 bot.sendMessage(chat_id, 'tupload is online')
             else:
-                bot.sendMessage(chat_id, 'Talk is cheap. Send me the files.')
+                pyperclip.copy(result)
+                bot.sendMessage(chat_id, 'Text copied to clipboard')
 
     elif msg_type == 'document':
         result = msg[msg_type]['file_name']
